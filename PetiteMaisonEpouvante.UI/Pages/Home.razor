@@ -1,0 +1,184 @@
+﻿@page "/"
+@using PetiteMaisonEpouvante.Core
+@using System.Net.Http.Headers
+@using System.Text.Json
+@inject HttpClient Http
+
+<PageTitle>Accueil - Petite Maison de l'Épouvante</PageTitle>
+
+<div class="container py-4">
+    <div class="row mb-5">
+        <div class="col-md-8">
+            <h1>Bienvenue à la Petite Maison de l'Épouvante</h1>
+            <p class="lead">Le lieu de rêve pour frissonner - Vente de produits & espace communautaire d'échanges</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav class="nav nav-tabs mb-3" role="tablist">
+                <a class="nav-link" @onclick="@(() => SetActiveTab(0))" role="tab">
+                    🛍️ Produits
+                </a>
+                <a class="nav-link" @onclick="@(() => SetActiveTab(1))" role="tab">
+                    🔄 Échanges
+                </a>
+                <a class="nav-link" @onclick="@(() => SetActiveTab(2))" role="tab">
+                    📰 Fanzine
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+        </div>
+    }
+
+    @if (activeTab == 0)
+    {
+        <div class="tab-pane fade show active">
+            <h2>Produits disponibles</h2>
+            <div class="row">
+                @if (products == null)
+                {
+                    <p><em>Chargement des produits...</em></p>
+                }
+                else if (!products.Any())
+                {
+                    <div class="col-12">
+                        <p class="text-muted">Aucun produit disponible pour le moment.</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var product in products)
+                    {
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                @if (!string.IsNullOrEmpty(product.PhotoUrl))
+                                {
+                                    <img src="@product.PhotoUrl" class="card-img-top" alt="@product.Name">
+                                }
+                                <div class="card-body">
+                                    <h5 class="card-title">@product.Name</h5>
+                                    <p class="card-text">@product.Description</p>
+                                    <p class="card-text">
+                                        <strong>Prix:</strong> @product.Price.ToString("C")
+                                        <br />
+                                        <strong>Stock:</strong> @product.Stock
+                                    </p>
+                                    <button class="btn btn-success btn-sm" @onclick="@(() => AddToCart(product.Id))">
+                                        ➕ Ajouter au panier
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    @if (activeTab == 1)
+    {
+        <div class="tab-pane fade show active">
+            <h2>Espace communautaire d'échanges</h2>
+            <button class="btn btn-primary mb-3" @onclick="@(() => ShowCreateExchangeModal = true)">
+                ➕ Créer une annonce d'échange
+            </button>
+            <div class="row">
+                @if (exchangePosts == null)
+                {
+                    <p><em>Chargement des annonces...</em></p>
+                }
+                else if (!exchangePosts.Any())
+                {
+                    <div class="col-12">
+                        <p class="text-muted">Aucune annonce d'échange pour le moment.</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var post in exchangePosts)
+                    {
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">@post.Title</h5>
+                                    <p class="card-text">@post.Description</p>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="badge bg-info">@post.Type</span>
+                                        <span class="text-muted small">@post.UserName</span>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary mt-2">
+                                        💬 Contacter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    @if (activeTab == 2)
+    {
+        <div class="tab-pane fade show active">
+            <h2>Fanzine - Horreur, Fantastique & Heroic Fantasy</h2>
+            <p>Contenus exclusifs, 4 numéros par an</p>
+            <button class="btn btn-primary">📚 S'abonner au fanzine</button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Product>? products;
+    private List<ExchangePost>? exchangePosts;
+    private string? errorMessage;
+    private int activeTab = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+        await LoadExchangePosts();
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            products = await Http.GetFromJsonAsync<List<Product>>("api/products");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Impossible de charger les produits : " + ex.Message;
+        }
+    }
+
+    private async Task LoadExchangePosts()
+    {
+        try
+        {
+            exchangePosts = await Http.GetFromJsonAsync<List<ExchangePost>>("api/exchangeposts");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Impossible de charger les annonces d'échanges : " + ex.Message;
+        }
+    }
+
+    private void SetActiveTab(int tab)
+    {
+        activeTab = tab;
+    }
+
+    private void AddToCart(Guid productId)
+    {
+        errorMessage = "Fonctionnalité panier - À implémenter";
+    }
+}

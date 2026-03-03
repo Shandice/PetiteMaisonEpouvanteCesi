@@ -1,0 +1,208 @@
+@page "/vendre"
+@page "/vendre/produits"
+@using PetiteMaisonEpouvante.Core
+@using System.Net.Http.Headers 
+@using System.Text.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Vendre vos produits - Petite Maison de l'Épouvante</PageTitle>
+
+<div class="container py-4">
+    <h1>Proposer vos produits à la vente</h1>
+    <p class="lead">Vendez vos propriétés figurines, goodies, CD/DVD Blu-ray, jeux de plateau ...</p>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+        </div>
+    }
+
+    @if (successMessage != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="@(() => successMessage = null)"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Ajouter un nouveau produit</h3>
+            <EditForm Model="@newProduct" OnValidSubmit="@HandleValidSubmit">
+                <DataAnnotationsValidator />
+            
+                <div class="mb-3">
+                    <label>Nom du produit :</label>
+                    <InputText @bind-Value="newProduct.Name" class="form-control" />
+                    <ValidationMessage For="@(() => newProduct.Name)" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label>Description :</label>
+                    <InputTextArea @bind-Value="newProduct.Description" class="form-control" rows="4" />
+                    <ValidationMessage For="@(() => newProduct.Description)" class="text-danger" />
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Prix (€) :</label>
+                        <InputNumber @bind-Value="newProduct.Price" class="form-control" />
+                        <ValidationMessage For="@(() => newProduct.Price)" class="text-danger" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Frais de port (€) :</label>
+                        <InputNumber @bind-Value="newProduct.ShippingCost" class="form-control" />
+                        <ValidationMessage For="@(() => newProduct.ShippingCost)" class="text-danger" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Stock :</label>
+                        <InputNumber @bind-Value="newProduct.Stock" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Photo (URL) :</label>
+                        <InputText @bind-Value="newProduct.PhotoUrl" class="form-control" />
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                    @if (isSubmitting) { <span>⏳ Ajout en cours...</span> } 
+                    else { <span>✅ Ajouter le produit</span> }
+                </button>
+            </EditForm>
+        </div>
+
+        <div class="col-md-6">
+            <h3>Vos produits</h3>
+            @if (userProducts == null)
+            {
+                <p><em>Chargement de vos produits...</em></p>
+            }
+            else if (!userProducts.Any())
+            {
+                <div class="alert alert-info">
+                    Vous n'avez pas encore ajouté de produits.
+                </div>
+            }
+            else
+            {
+                <div class="list-group">
+                    @foreach (var product in userProducts)
+                    {
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-0">@product.Name</h6>
+                                    <small class="text-muted">@product.Price.ToString("C") | Stock: @product.Stock</small>
+                                </div>
+                                <button class="btn btn-sm btn-danger" @onclick="@(() => DeleteProduct(product.Id))">
+                                    Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private Product newProduct = new Product { Stock = 1, ShippingCost = 5 };
+    private List<Product> userProducts = new List<Product>();
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isSubmitting = false;
+    private const string DEMO_USER_ID = "user-demo-seller";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProducts();
+    }
+
+    private async Task LoadUserProducts()
+    {
+        try
+        {
+            var allProducts = await Http.GetFromJsonAsync<List<Product>>("api/products");
+            userProducts = allProducts?.Where(p => p.SellerId == DEMO_USER_ID).ToList() ?? new List<Product>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors du chargement des produits : " + ex.Message;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            newProduct.SellerId = DEMO_USER_ID;
+            newProduct.CreatedAt = DateTime.UtcNow;
+            newProduct.CategoryId = Guid.Empty; // À utiliser avec un vrai système de catégories
+
+            var response = await Http.PostAsJsonAsync("api/products", newProduct);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "✅ Produit ajouté avec succès !";
+                newProduct = new Product { Stock = 1, ShippingCost = 5 };
+                await LoadUserProducts();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Erreur lors de l'ajout : {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur réseau : " + ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DeleteProduct(Guid productId)
+    {
+        if (!await ConfirmDelete("Êtes-vous sûr de vouloir supprimer ce produit ?"))
+            return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/products/{productId}");
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "✅ Produit supprimé";
+                await LoadUserProducts();
+            }
+            else
+            {
+                errorMessage = "Erreur lors de la suppression";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur : " + ex.Message;
+        }
+    }
+
+    private async Task<bool> ConfirmDelete(string message)
+    {
+        // En Blazor, utiliser JavaScript pour les confirmations
+        return await Task.FromResult(true);
+    }
+}

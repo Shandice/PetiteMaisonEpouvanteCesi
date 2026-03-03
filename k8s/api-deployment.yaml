@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petitemaisonepouvante-api
+  namespace: petitemaisonepouvante
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: petitemaisonepouvante-api
+  template:
+    metadata:
+      labels:
+        app: petitemaisonepouvante-api
+    spec:
+      containers:
+      - name: api
+        image: petitemaisonepouvante.api:latest  # build locally with `docker build -t petitemaisonepouvante.api:latest PetiteMaisonEpouvante.API`
+        ports:
+        - containerPort: 80
+        env:
+        - name: ConnectionStrings__DefaultConnection
+          value: "Server=petitemaisonepouvante-db;Database=CollectorDb;User Id=sa;Password=Password123!;TrustServerCertificate=True;"
+        - name: Jwt__Key
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: petitemaisonepouvante-api
+  namespace: petitemaisonepouvante
+spec:
+  selector:
+    app: petitemaisonepouvante-api
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

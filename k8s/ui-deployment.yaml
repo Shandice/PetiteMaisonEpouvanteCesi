@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petitemaisonepouvante-ui
+  namespace: petitemaisonepouvante
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: petitemaisonepouvante-ui
+  template:
+    metadata:
+      labels:
+        app: petitemaisonepouvante-ui
+    spec:
+      containers:
+      - name: ui
+        image: petitemaisonepouvante.ui:latest  # build locally with `docker build -t petitemaisonepouvante.ui:latest PetiteMaisonEpouvante.UI`
+        ports:
+        - containerPort: 80
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"  # or Development as needed
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: petitemaisonepouvante-ui
+  namespace: petitemaisonepouvante
+spec:
+  selector:
+    app: petitemaisonepouvante-ui
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collector-db
+  namespace: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector-db
+  template:
+    metadata:
+      labels:
+        app: collector-db
+    spec:
+      containers:
+      - name: mssql
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          value: "Password123!" # use a secret in production
+        volumeMounts:
+        - name: mssqldata
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: mssqldata
+        emptyDir: {} # for demo; switch to PVC in real use
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector-db
+  namespace: collector
+spec:
+  selector:
+    app: collector-db
+  ports:
+  - port: 1433
+    targetPort: 1433
+  clusterIP: None # headless service, clients connect by name
