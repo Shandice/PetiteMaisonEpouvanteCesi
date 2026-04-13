@@ -19,19 +19,19 @@ jobs:
         dotnet-version: 8.0.x
         
     - name: Restore dependencies
-      run: dotnet restore Collector.Solution.sln
+      run: dotnet restore PetiteMaisonEpouvante.Solution.sln
       
     - name: Build
-      run: dotnet build Collector.Solution.sln --no-restore
+      run: dotnet build PetiteMaisonEpouvante.Solution.sln --no-restore
       
     - name: Test and Collect Coverage
-      run: dotnet test Collector.Solution.sln --no-build --verbosity normal --collect:"XPlat Code Coverage"
+      run: dotnet test PetiteMaisonEpouvante.Solution.sln --no-build --verbosity normal --collect:"XPlat Code Coverage"
 
     # run the heavier load/performance scenario separately so it's easy to
     # identify failures or to allocate more resources if needed
     - name: Run Load/Performance Tests
       run: |
-        dotnet test Collector.Tests/Collector.Tests.csproj \
+        dotnet test PetiteMaisonEpouvante.Tests/PetiteMaisonEpouvante.Tests.csproj \
           --no-build \
           --filter FullyQualifiedName~LoadTests \
           --verbosity normal

@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace PetiteMaisonEpouvante.API.Services;
+namespace PetiteMaisonEpouvante.API;
 
 public class OrderService
 {
@@ -28,7 +28,7 @@ public class OrderService
 
         decimal totalPrice = 0;
 
-        foreach (var item in dto.Items)
+        foreach (var item in dto.Items!)
         {
             var product = await _context.Products.FindAsync(item.ProductId);
             if (product == null)

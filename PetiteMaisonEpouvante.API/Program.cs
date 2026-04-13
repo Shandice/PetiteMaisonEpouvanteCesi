@@ -1,6 +1,6 @@
 using PetiteMaisonEpouvante.API.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using PetiteMaisonEpouvante.API.Services;
+using PetiteMaisonEpouvante.API;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -80,7 +80,8 @@ using (var scope = app.Services.CreateScope())
         
         if (app.Environment.IsDevelopment())
         {
-            db.Database.Migrate();
+            db.Database.EnsureDeleted(); // Détruit les résidus de l'ancienne DB plantée
+            db.Database.EnsureCreated(); // Recrée la DB proprement à partir de zéro
         }
         
         Log.Information("Base de données initialisée avec succès pour le POC.");

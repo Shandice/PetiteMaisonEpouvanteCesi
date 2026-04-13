@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: collector-db
-  namespace: collector
+  name: petitemaisonepouvante-db
+  namespace: petitemaisonepouvante
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: collector-db
+      app: petitemaisonepouvante-db
   template:
     metadata:
       labels:
-        app: collector-db
+        app: petitemaisonepouvante-db
     spec:
       containers:
       - name: mssql
@@ -33,11 +33,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: collector-db
-  namespace: collector
+  name: petitemaisonepouvante-db
+  namespace: petitemaisonepouvante
 spec:
   selector:
-    app: collector-db
+    app: petitemaisonepouvante-db
   ports:
   - port: 1433
     targetPort: 1433

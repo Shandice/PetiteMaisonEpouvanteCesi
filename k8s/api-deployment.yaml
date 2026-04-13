@@ -20,7 +20,7 @@ spec:
         - containerPort: 80
         env:
         - name: ConnectionStrings__DefaultConnection
-          value: "Server=petitemaisonepouvante-db;Database=CollectorDb;User Id=sa;Password=Password123!;TrustServerCertificate=True;"
+          value: "Server=petitemaisonepouvante-db;Database=PetiteMaisonEpouvanteDb;User Id=sa;Password=Password123!;TrustServerCertificate=True;"
         - name: Jwt__Key
           valueFrom:
             secretKeyRef:

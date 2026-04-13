@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PetiteMaisonEpouvante.API.Data;
 using PetiteMaisonEpouvante.Core;
-using PetiteMaisonEpouvante.API.Services;
 
 namespace PetiteMaisonEpouvante.API.Controllers;
 

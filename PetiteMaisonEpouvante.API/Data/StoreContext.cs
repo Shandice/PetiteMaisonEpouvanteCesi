@@ -17,9 +17,6 @@ public class StoreContext : DbContext
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<Message> Messages { get; set; }
     public DbSet<Article> Articles { get; set; }
-    
-    // Legacy
-    public DbSet<Item> Items { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,7 +27,7 @@ public class StoreContext : DbContext
             .HasOne(p => p.Category)
             .WithMany(c => c.Products)
             .HasForeignKey(p => p.CategoryId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Configuration Order
         modelBuilder.Entity<Order>()

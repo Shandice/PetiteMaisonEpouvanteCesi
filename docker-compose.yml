@@ -1,21 +1,26 @@
 services:
   traefik:
-    image: traefik:v3.0
+    image: traefik:v2
+    restart: unless-stopped
     command:
+      - "--log.level=DEBUG" # Active les logs détaillés pour comprendre le blocage
       - "--api.insecure=true" # Active le dashboard Traefik
       - "--providers.docker=true" # Écoute les événements Docker
       - "--providers.docker.exposedbydefault=false" # Ne route pas les conteneurs sans labels
-      - "--entryPoints.web.address=:80"
-      - "--entryPoints.websecure.address=:443"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure" # Redirige HTTP vers HTTPS
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
     ports:
       - "80:80"
       - "443:443"
       - "8080:8080" # Port pour accéder au Dashboard Traefik (http://localhost:8080)
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro" # Permet à Traefik de lire la config des conteneurs
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=Password123!
@@ -24,6 +29,7 @@ services:
 
   seq:
     image: datalust/seq:latest
+    restart: unless-stopped
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_ADMINPASSWORD=adminpassword
@@ -32,6 +38,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
+    restart: unless-stopped
     command: start-dev
     environment:
       - KEYCLOAK_ADMIN=admin
@@ -40,23 +47,26 @@ services:
       - "8081:8080"
 
   api:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: PetiteMaisonEpouvante.API/Dockerfile
     environment:
       - ASPNETCORE_HTTP_PORTS=80
-      - ConnectionStrings__DefaultConnection=Server=db;Database=CollectorDb;User Id=sa;Password=Password123!;TrustServerCertificate=True;
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=PetiteMaisonEpouvanteDb;User Id=sa;Password=Password123!;TrustServerCertificate=True;
     depends_on:
       - db
       - seq
     labels:
       - "traefik.enable=true"
-      # On accèdera à l'API via https://api.localhost
-      - "traefik.http.routers.api.rule=Host(`api.localhost`)"
-      - "traefik.http.routers.api.entrypoints=websecure" # Force le HTTPS
-      - "traefik.http.routers.api.tls=true" # Active le certificat auto-signé
+      - "traefik.http.routers.pme-api.rule=Host(`api.localhost`) || (Host(`localhost`) && PathPrefix(`/api`))"
+      - "traefik.http.routers.pme-api.entrypoints=websecure"
+      - "traefik.http.routers.pme-api.tls=true"
+      - "traefik.http.services.pme-api.loadbalancer.server.port=80"
 
   ui:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: PetiteMaisonEpouvante.UI/Dockerfile
@@ -64,10 +74,10 @@ services:
       - api
     labels:
       - "traefik.enable=true"
-      # On accèdera à l'UI via https://localhost
-      - "traefik.http.routers.ui.rule=Host(`localhost`)"
-      - "traefik.http.routers.ui.entrypoints=websecure" # Force le HTTPS
-      - "traefik.http.routers.ui.tls=true" # Active le certificat auto-signé
+      - "traefik.http.routers.pme-ui.rule=Host(`localhost`)"
+      - "traefik.http.routers.pme-ui.entrypoints=websecure"
+      - "traefik.http.routers.pme-ui.tls=true"
+      - "traefik.http.services.pme-ui.loadbalancer.server.port=80"
 
   # helper container that applies our Kubernetes manifests to the local cluster; it runs once when `docker compose up` is invoked and then exits.
   k8s-init:
