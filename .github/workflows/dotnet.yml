@@ -47,6 +47,19 @@ jobs:
     - name: Simulate Deployment (Build Docker Compose)
       run: docker compose build
 
+    - name: Build API Image for Scanning
+      run: docker build -t petitemaisonepouvante.api:latest PetiteMaisonEpouvante.API
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'petitemaisonepouvante.api:latest'
+        format: 'table'
+        exit-code: '1'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH'
+
   # optionally you could deploy to a Kubernetes cluster here.  GitHub Actions
   # runners do not have a cluster by default, but you could add a step to
   # configure `kubectl` against your environment (kind, GKE, AKS, etc.) and then

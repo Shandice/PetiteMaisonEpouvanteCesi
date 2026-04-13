@@ -200,8 +200,3 @@ public class Article
     public DateTime? UpdatedAt { get; set; }
     public bool IsPublished { get; set; } = false;
 }
-
-// Legacy - kept for backward compatibility
-public class Item : Product
-{
-}

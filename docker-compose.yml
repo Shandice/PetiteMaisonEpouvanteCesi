@@ -30,6 +30,15 @@ services:
     ports:
       - "5341:80"
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - "8081:8080"
+
   api:
     build:
       context: .

@@ -1,5 +1,6 @@
 using PetiteMaisonEpouvante.API.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using PetiteMaisonEpouvante.API.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -18,9 +19,6 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<StoreContext>(options => options.UseSqlServer(connectionString));
 
 // 3. Configuration de l'Authentification (JWT)
-var secretKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing");
-var key = Encoding.ASCII.GetBytes(secretKey);
-
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -28,17 +26,12 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    options.Authority = "http://localhost:8081/realms/LaPetiteMaison";
+    options.Audience = "api-client";
     options.RequireHttpsMetadata = false; // Important car pas de HTTPS dans Docker interne
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false
-    };
 });
 
+builder.Services.AddScoped<OrderService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -70,7 +63,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddCors(options => 
 {
     options.AddPolicy("StrictPolicy", p => p
-        .SetIsOriginAllowed(_ => true) // Autorise n'importe quelle origine pour le POC
+        .WithOrigins("https://localhost") // Restreint aux origines légitimes
         .AllowAnyMethod()              // Autorise GET, POST, OPTIONS, etc.
         .AllowAnyHeader());            // Autorise les en-têtes Authorization et Content-Type
 });
@@ -85,9 +78,10 @@ using (var scope = app.Services.CreateScope())
     {
         var db = services.GetRequiredService<StoreContext>();
         
-        // On détruit et on recrée la base proprement pour le POC (assure que les nouvelles colonnes sont là)
-        db.Database.EnsureDeleted();
-        db.Database.EnsureCreated(); 
+        if (app.Environment.IsDevelopment())
+        {
+            db.Database.Migrate();
+        }
         
         Log.Information("Base de données initialisée avec succès pour le POC.");
     } 

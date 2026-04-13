@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PetiteMaisonEpouvante.API.Data;
 using PetiteMaisonEpouvante.Core;
+using PetiteMaisonEpouvante.API.Services;
 
 namespace PetiteMaisonEpouvante.API.Controllers;
 
@@ -10,10 +11,12 @@ namespace PetiteMaisonEpouvante.API.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly StoreContext _context;
+    private readonly OrderService _orderService;
 
-    public OrdersController(StoreContext context)
+    public OrdersController(StoreContext context, OrderService orderService)
     {
         _context = context;
+        _orderService = orderService;
     }
 
     [HttpGet]
@@ -53,49 +56,15 @@ public class OrdersController : ControllerBase
             return BadRequest(new { message = "Données de commande invalides" });
         }
 
-        var order = new Order
+        try
         {
-            UserId = dto.UserId,
-            Status = OrderStatus.Pending,
-            Items = new List<OrderItem>()
-        };
-
-        decimal totalPrice = 0;
-
-        foreach (var item in dto.Items)
-        {
-            var product = await _context.Products.FindAsync(item.ProductId);
-            if (product == null)
-            {
-                return BadRequest(new { message = $"Produit {item.ProductId} non trouvé" });
-            }
-
-            if (product.Stock < item.Quantity)
-            {
-                return BadRequest(new { message = $"Stock insuffisant pour {product.Name}" });
-            }
-
-            var orderItem = new OrderItem
-            {
-                ProductId = product.Id,
-                ProductName = product.Name,
-                Quantity = item.Quantity,
-                UnitPrice = product.Price
-            };
-
-            order.Items.Add(orderItem);
-            totalPrice += product.Price * item.Quantity;
-
-            // Réduire le stock
-            product.Stock -= item.Quantity;
-            _context.Products.Update(product);
+            var order = await _orderService.CreateOrderAsync(dto);
+            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
-
-        order.TotalPrice = totalPrice;
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPut("{id}/status")]
@@ -120,35 +89,19 @@ public class OrdersController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> CancelOrder(Guid id)
     {
-        var order = await _context.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id);
-
-        if (order == null)
+        try
         {
-            return NotFound(new { message = "Commande non trouvée" });
+            await _orderService.CancelOrderAsync(id);
+            return Ok(new { message = "Commande annulée avec succès" });
         }
-
-        if (order.Status == OrderStatus.Cancelled)
+        catch (KeyNotFoundException ex)
         {
-            return BadRequest(new { message = "Cette commande est déjà annulée" });
+            return NotFound(new { message = ex.Message });
         }
-
-        // Restaurer le stock
-        foreach (var item in order.Items)
+        catch (Exception ex)
         {
-            var product = await _context.Products.FindAsync(item.ProductId);
-            if (product != null)
-            {
-                product.Stock += item.Quantity;
-                _context.Products.Update(product);
-            }
+            return BadRequest(new { message = ex.Message });
         }
-
-        order.Status = OrderStatus.Cancelled;
-        order.UpdatedAt = DateTime.UtcNow;
-        _context.Orders.Update(order);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Commande annulée avec succès" });
     }
 }
 

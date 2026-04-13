@@ -36,28 +36,28 @@ public class IntegrationTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Get_Items_Returns_Success()
+    public async Task Get_Products_Returns_Success()
     {
         // Arrange
         var client = _factory.CreateClient();
 
         // Act
-        var response = await client.GetAsync("/api/items");
+        var response = await client.GetAsync("/api/products");
 
         // Assert
         response.EnsureSuccessStatusCode(); // Vérifie que c'est 200 OK
     }
 
     [Fact]
-    public async Task Post_Item_Without_Token_Returns_Unauthorized()
+    public async Task Post_Product_Without_Token_Returns_Unauthorized()
     {
         // Arrange
         var client = _factory.CreateClient();
-        var newItem = new { Name = "Figurine Test", Price = 10.5m, Description = "Test" };
+        var newItem = new { Name = "Figurine Test", Price = 10.5m, Description = "Test", CategoryId = Guid.NewGuid(), Stock = 5 };
         var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(newItem), System.Text.Encoding.UTF8, "application/json");
 
         // Act
-        var response = await client.PostAsync("/api/items", content);
+        var response = await client.PostAsync("/api/products", content);
 
         // Assert
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode); 
