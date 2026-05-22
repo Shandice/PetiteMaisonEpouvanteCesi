@@ -200,3 +200,27 @@ public class Article
     public DateTime? UpdatedAt { get; set; }
     public bool IsPublished { get; set; } = false;
 }
+
+public class Exchange
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    
+    public Guid OfferedProductId { get; set; }
+    public Product? OfferedProduct { get; set; }
+    
+    public Guid RequestedProductId { get; set; }
+    public Product? RequestedProduct { get; set; }
+    
+    public string UserId { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    
+    public ExchangeStatus Status { get; set; } = ExchangeStatus.Pending;
+}
+
+public enum ExchangeStatus
+{
+    Pending,
+    Accepted,
+    Rejected,
+    Completed
+}

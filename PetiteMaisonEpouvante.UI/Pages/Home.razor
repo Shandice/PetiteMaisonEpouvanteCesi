@@ -87,7 +87,7 @@
     {
         <div class="tab-pane fade show active">
             <h2>Espace communautaire d'échanges</h2>
-            <button class="btn btn-primary mb-3" @onclick="@(() => ShowCreateExchangeModal = true)">
+            <button class="btn btn-primary mb-3" @onclick="@(() => ShowCreateExchangeModal = true)" disabled="@(products == null || !products.Any())">
                 ➕ Créer une annonce d'échange
             </button>
             <div class="row">
@@ -134,6 +134,55 @@
             <button class="btn btn-primary">📚 S'abonner au fanzine</button>
         </div>
     }
+
+    @if (ShowCreateExchangeModal)
+    {
+        <div class="modal fade show" style="display: block;" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Créer une proposition d'échange</h5>
+                        <button type="button" class="btn-close" @onclick="CloseExchangeModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Produit proposé</h6>
+                                <select class="form-select" @bind="selectedOfferedProductId">
+                                    <option value="">-- Sélectionnez un produit --</option>
+                                    @if (products != null)
+                                    {
+                                        foreach (var product in products)
+                                        {
+                                            <option value="@product.Id">@product.Name</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Produit demandé</h6>
+                                <select class="form-select" @bind="selectedRequestedProductId">
+                                    <option value="">-- Sélectionnez un produit --</option>
+                                    @if (products != null)
+                                    {
+                                        foreach (var product in products)
+                                        {
+                                            <option value="@product.Id">@product.Name</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseExchangeModal">Annuler</button>
+                        <button type="button" class="btn btn-primary" @onclick="CreateExchange" disabled="@(selectedOfferedProductId == null || selectedRequestedProductId == null)">Valider l'échange</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
 </div>
 
 @code {
@@ -142,6 +191,9 @@
     private string? errorMessage;
     private int activeTab = 0;
     private bool ShowCreateExchangeModal = false;
+    
+    private Guid? selectedOfferedProductId;
+    private Guid? selectedRequestedProductId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -181,5 +233,29 @@
     private void AddToCart(Guid productId)
     {
         errorMessage = "Fonctionnalité panier - À implémenter";
+    }
+
+    private void CloseExchangeModal()
+    {
+        ShowCreateExchangeModal = false;
+        selectedOfferedProductId = null;
+        selectedRequestedProductId = null;
+    }
+
+    private void CreateExchange()
+    {
+        if (selectedOfferedProductId != null && selectedRequestedProductId != null)
+        {
+            var newExchange = new Exchange
+            {
+                OfferedProductId = selectedOfferedProductId.Value,
+                RequestedProductId = selectedRequestedProductId.Value,
+                UserId = "user123" // Placeholder
+            };
+            // À terme, on appellera l'API pour enregistrer l'échange :
+            // await Http.PostAsJsonAsync("api/exchanges", newExchange);
+            
+            CloseExchangeModal();
+        }
     }
 }
