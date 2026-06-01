@@ -1,16 +1,40 @@
 @page "/vendre"
 @page "/vendre/produits"
 @using PetiteMaisonEpouvante.Core
+@using PetiteMaisonEpouvante.UI.Services
 @using System.Net.Http.Headers 
 @using System.Text.Json
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IAuthenticationService AuthService
+@implements IAsyncDisposable
 
 <PageTitle>Vendre vos produits - Petite Maison de l'Épouvante</PageTitle>
 
 <div class="container py-4">
-    <h1>Proposer vos produits à la vente</h1>
-    <p class="lead">Vendez vos propriétés figurines, goodies, CD/DVD Blu-ray, jeux de plateau ...</p>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Proposer vos produits à la vente</h1>
+            <p class="lead">Vendez vos propriétés figurines, goodies, CD/DVD Blu-ray, jeux de plateau ...</p>
+        </div>
+        <div class="text-end">
+            @if (isAuthenticated)
+            {
+                <div class="alert alert-success mb-2" role="alert">
+                    ✅ Connecté as: <strong>@currentUserName</strong>
+                </div>
+                <button class="btn btn-warning btn-sm" @onclick="HandleLogout">
+                    Déconnexion
+                </button>
+            }
+            else
+            {
+                <button class="btn btn-primary btn-sm" @onclick="HandleSimulateLogin">
+                    🔐 Simuler une connexion
+                </button>
+            }
+        </div>
+    </div>
 
     @if (errorMessage != null)
     {
@@ -31,52 +55,62 @@
     <div class="row">
         <div class="col-md-6">
             <h3>Ajouter un nouveau produit</h3>
-            <EditForm Model="@newProduct" OnValidSubmit="@HandleValidSubmit">
-                <DataAnnotationsValidator />
-            
-                <div class="mb-3">
-                    <label>Nom du produit :</label>
-                    <InputText @bind-Value="newProduct.Name" class="form-control" />
-                    <ValidationMessage For="@(() => newProduct.Name)" class="text-danger" />
+            @if (!isAuthenticated)
+            {
+                <div class="alert alert-warning" role="alert">
+                    <strong>⚠️ Connexion requise</strong><br>
+                    Veuillez cliquer sur le bouton "Simuler une connexion" en haut à droite pour commencer.
                 </div>
-
-                <div class="mb-3">
-                    <label>Description :</label>
-                    <InputTextArea @bind-Value="newProduct.Description" class="form-control" rows="4" />
-                    <ValidationMessage For="@(() => newProduct.Description)" class="text-danger" />
-                </div>
+            }
+            else
+            {
+                <EditForm Model="@newProduct" OnValidSubmit="@HandleValidSubmit">
+                    <DataAnnotationsValidator />
                 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label>Prix (€) :</label>
-                        <InputNumber @bind-Value="newProduct.Price" class="form-control" />
-                        <ValidationMessage For="@(() => newProduct.Price)" class="text-danger" />
+                    <div class="mb-3">
+                        <label>Nom du produit :</label>
+                        <InputText @bind-Value="newProduct.Name" class="form-control" />
+                        <ValidationMessage For="@(() => newProduct.Name)" class="text-danger" />
                     </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label>Frais de port (€) :</label>
-                        <InputNumber @bind-Value="newProduct.ShippingCost" class="form-control" />
-                        <ValidationMessage For="@(() => newProduct.ShippingCost)" class="text-danger" />
+                    <div class="mb-3">
+                        <label>Description :</label>
+                        <InputTextArea @bind-Value="newProduct.Description" class="form-control" rows="4" />
+                        <ValidationMessage For="@(() => newProduct.Description)" class="text-danger" />
                     </div>
-                </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Prix (€) :</label>
+                            <InputNumber @bind-Value="newProduct.Price" class="form-control" />
+                            <ValidationMessage For="@(() => newProduct.Price)" class="text-danger" />
+                        </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label>Stock :</label>
-                        <InputNumber @bind-Value="newProduct.Stock" class="form-control" />
+                        <div class="col-md-6 mb-3">
+                            <label>Frais de port (€) :</label>
+                            <InputNumber @bind-Value="newProduct.ShippingCost" class="form-control" />
+                            <ValidationMessage For="@(() => newProduct.ShippingCost)" class="text-danger" />
+                        </div>
                     </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label>Photo (URL) :</label>
-                        <InputText @bind-Value="newProduct.PhotoUrl" class="form-control" />
-                    </div>
-                </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Stock :</label>
+                            <InputNumber @bind-Value="newProduct.Stock" class="form-control" />
+                        </div>
 
-                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                    @if (isSubmitting) { <span>⏳ Ajout en cours...</span> } 
-                    else { <span>✅ Ajouter le produit</span> }
-                </button>
-            </EditForm>
+                        <div class="col-md-6 mb-3">
+                            <label>Photo (URL) :</label>
+                            <InputText @bind-Value="newProduct.PhotoUrl" class="form-control" />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                        @if (isSubmitting) { <span>⏳ Ajout en cours...</span> } 
+                        else { <span>✅ Ajouter le produit</span> }
+                    </button>
+                </EditForm>
+            }
         </div>
 
         <div class="col-md-6">
@@ -120,19 +154,69 @@
     private string? errorMessage;
     private string? successMessage;
     private bool isSubmitting = false;
-    private const string DEMO_USER_ID = "user-demo-seller";
+    private bool isAuthenticated = false;
+    private string? currentUserId;
+    private string? currentUserName;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadUserProducts();
+        // Subscribe to authentication changes
+        AuthService.OnAuthenticationChanged += OnAuthenticationChanged;
+        
+        // Check current authentication status
+        await CheckAuthenticationStatus();
+    }
+
+    private async void OnAuthenticationChanged()
+    {
+        await CheckAuthenticationStatus();
+        StateHasChanged();
+    }
+
+    private async Task CheckAuthenticationStatus()
+    {
+        isAuthenticated = await AuthService.IsAuthenticated();
+        var user = await AuthService.GetCurrentUser();
+        
+        if (user.HasValue)
+        {
+            currentUserId = user.Value.UserId;
+            currentUserName = user.Value.UserName;
+            await LoadUserProducts();
+        }
+        else
+        {
+            currentUserId = null;
+            currentUserName = null;
+            userProducts = new List<Product>();
+        }
+    }
+
+    private async Task HandleSimulateLogin()
+    {
+        // Create a demo user
+        string userId = "seller-" + Guid.NewGuid().ToString().Substring(0, 8);
+        string userName = "Vendeur Test";
+        
+        await AuthService.SimulateLogin(userId, userName);
+        await CheckAuthenticationStatus();
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.Logout();
+        await CheckAuthenticationStatus();
     }
 
     private async Task LoadUserProducts()
     {
         try
         {
+            if (string.IsNullOrEmpty(currentUserId))
+                return;
+
             var allProducts = await Http.GetFromJsonAsync<List<Product>>("api/products");
-            userProducts = allProducts?.Where(p => p.SellerId == DEMO_USER_ID).ToList() ?? new List<Product>();
+            userProducts = allProducts?.Where(p => p.SellerId == currentUserId).ToList() ?? new List<Product>();
         }
         catch (Exception ex)
         {
@@ -142,13 +226,19 @@
 
     private async Task HandleValidSubmit()
     {
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            errorMessage = "Vous devez d'abord simuler une connexion.";
+            return;
+        }
+
         isSubmitting = true;
         errorMessage = null;
         successMessage = null;
 
         try
         {
-            newProduct.SellerId = DEMO_USER_ID;
+            newProduct.SellerId = currentUserId;
             newProduct.CreatedAt = DateTime.UtcNow;
             newProduct.CategoryId = Guid.Empty; // À utiliser avec un vrai système de catégories
 
@@ -204,5 +294,10 @@
     {
         // En Blazor, utiliser JavaScript pour les confirmations
         return await Task.FromResult(true);
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        AuthService.OnAuthenticationChanged -= OnAuthenticationChanged;
     }
 }
