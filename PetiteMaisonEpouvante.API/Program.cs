@@ -95,6 +95,29 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
+// Middleware de développement : si l'entête X-Demo-User est présent, on crée un user authentifié
+app.Use(async (context, next) =>
+{
+    if (app.Environment.IsDevelopment())
+    {
+        if (context.Request.Headers.TryGetValue("X-Demo-User", out var demoUser))
+        {
+            try
+            {
+                var claims = new[] {
+                    new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, demoUser.ToString()),
+                    new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, "DemoUser")
+                };
+                var identity = new System.Security.Claims.ClaimsIdentity(claims, "Demo");
+                context.User = new System.Security.Claims.ClaimsPrincipal(identity);
+            }
+            catch { }
+        }
+    }
+
+    await next();
+});
+
 // ----------------------------------------------------
 // ORDRE STRICT DES MIDDLEWARES : TRÈS IMPORTANT EN .NET
 // ----------------------------------------------------
