@@ -1,6 +1,7 @@
 using PetiteMaisonEpouvante.API.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using PetiteMaisonEpouvante.API;
+using PetiteMaisonEpouvante.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -82,6 +83,22 @@ using (var scope = app.Services.CreateScope())
         {
             db.Database.EnsureDeleted(); // Détruit les résidus de l'ancienne DB plantée
             db.Database.EnsureCreated(); // Recrée la DB proprement à partir de zéro
+            
+            // Seed default categories
+            if (!db.Categories.Any())
+            {
+                var categories = new[]
+                {
+                    new Category { Name = "Figurines", Description = "Figurines et collectibles" },
+                    new Category { Name = "Goodies", Description = "Goodies et merchandising" },
+                    new Category { Name = "CD/DVD/Blu-ray", Description = "Films et musique" },
+                    new Category { Name = "Jeux de plateau", Description = "Jeux de société et jeux de plateau" },
+                    new Category { Name = "Autres", Description = "Autres articles" }
+                };
+                db.Categories.AddRange(categories);
+                db.SaveChanges();
+                Log.Information("Catégories par défaut créées avec succès.");
+            }
         }
         
         Log.Information("Base de données initialisée avec succès pour le POC.");

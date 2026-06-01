@@ -128,6 +128,13 @@ public class ProductsController : ControllerBase
 
         return Ok(products);
     }
+
+    [HttpGet("categories")]
+    public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+    {
+        var categories = await _context.Categories.OrderBy(c => c.Name).ToListAsync();
+        return Ok(categories);
+    }
 }
 
 public class CreateProductDto
@@ -137,7 +144,7 @@ public class CreateProductDto
     public decimal Price { get; set; }
     public decimal ShippingCost { get; set; }
     public string? PhotoUrl { get; set; }
-    public Guid CategoryId { get; set; }
+    public Guid? CategoryId { get; set; }
     public string SellerId { get; set; } = string.Empty;
     public int Stock { get; set; }
 }

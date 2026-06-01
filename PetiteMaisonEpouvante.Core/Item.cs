@@ -21,7 +21,7 @@ public class Product
     [Range(0, 500, ErrorMessage = "Les frais de port ne peuvent pas être négatifs.")]
     public decimal ShippingCost { get; set; }
 
-    public Guid CategoryId { get; set; }
+    public Guid? CategoryId { get; set; }
     public Category? Category { get; set; }
 
     public string SellerId { get; set; } = string.Empty;

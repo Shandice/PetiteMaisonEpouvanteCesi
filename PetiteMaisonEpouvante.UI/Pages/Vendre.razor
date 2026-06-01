@@ -3,6 +3,7 @@
 @using PetiteMaisonEpouvante.Core
 @using PetiteMaisonEpouvante.UI.Services
 @using System.Net.Http.Headers 
+@using System.Net.Http.Json
 @using System.Text.Json
 @inject HttpClient Http
 @inject NavigationManager Navigation
@@ -100,6 +101,23 @@
                         </div>
 
                         <div class="col-md-6 mb-3">
+                            <label>Catégorie :</label>
+                            <InputSelect @bind-Value="newProduct.CategoryId" class="form-control">
+                                <option value="">-- Sélectionner une catégorie --</option>
+                                @if (categories != null)
+                                {
+                                    @foreach (var category in categories)
+                                    {
+                                        <option value="@category.Id">@category.Name</option>
+                                    }
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => newProduct.CategoryId)" class="text-danger" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
                             <label>Photo (URL) :</label>
                             <InputText @bind-Value="newProduct.PhotoUrl" class="form-control" />
                         </div>
@@ -151,6 +169,7 @@
 @code {
     private Product newProduct = new Product { Stock = 1, ShippingCost = 5 };
     private List<Product> userProducts = new List<Product>();
+    private List<Category> categories = new List<Category>();
     private string? errorMessage;
     private string? successMessage;
     private bool isSubmitting = false;
@@ -165,6 +184,26 @@
         
         // Check current authentication status
         await CheckAuthenticationStatus();
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            // Try to get categories from the dedicated endpoint
+            categories = await Http.GetFromJsonAsync<List<Category>>("api/products/categories") ?? new List<Category>();
+            
+            // Set default category if available
+            if (categories.Any() && newProduct.CategoryId == null)
+            {
+                newProduct.CategoryId = categories.First().Id;
+            }
+        }
+        catch
+        {
+            // Categories endpoint may not exist yet, continue without categories
+        }
     }
 
     private async void OnAuthenticationChanged()
@@ -240,7 +279,12 @@
         {
             newProduct.SellerId = currentUserId;
             newProduct.CreatedAt = DateTime.UtcNow;
-            newProduct.CategoryId = Guid.Empty; // À utiliser avec un vrai système de catégories
+            
+            // If no category selected, use the first one
+            if (newProduct.CategoryId == null && categories.Any())
+            {
+                newProduct.CategoryId = categories.First().Id;
+            }
 
             var response = await Http.PostAsJsonAsync("api/products", newProduct);
             
@@ -248,6 +292,10 @@
             {
                 successMessage = "✅ Produit ajouté avec succès !";
                 newProduct = new Product { Stock = 1, ShippingCost = 5 };
+                if (categories.Any())
+                {
+                    newProduct.CategoryId = categories.First().Id;
+                }
                 await LoadUserProducts();
             }
             else
