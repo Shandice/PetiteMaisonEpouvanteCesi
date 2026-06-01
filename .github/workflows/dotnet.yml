@@ -60,6 +60,20 @@ jobs:
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH'
 
+  deploy-local:
+    needs: build-docker-images
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Deploy locally on self-hosted runner
+      run: |
+        docker compose pull
+        docker compose up -d --build
+        docker image prune -f
+
   # optionally you could deploy to a Kubernetes cluster here.  GitHub Actions
   # runners do not have a cluster by default, but you could add a step to
   # configure `kubectl` against your environment (kind, GKE, AKS, etc.) and then

@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 23,
+  "agentName": "ALEX_ASUS",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus7.actions.githubusercontent.com/kWUsDhQGccJZRy3dCZ37y43qDakC7BglT3qOy8PkoN47HyyWt4/",
+  "gitHubUrl": "https://github.com/Shandice/PetiteMaisonEpouvanteCesi",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}
