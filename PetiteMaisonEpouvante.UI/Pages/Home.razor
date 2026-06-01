@@ -105,16 +105,21 @@
                 {
                     @foreach (var post in exchangePosts)
                     {
-                        <div class="col-md-6 mb-3">
-                            <div class="card">
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                @if (!string.IsNullOrEmpty(post.PhotoUrl))
+                                {
+                                    <img src="@post.PhotoUrl" class="card-img-top" alt="@post.Title">
+                                }
                                 <div class="card-body">
                                     <h5 class="card-title">@post.Title</h5>
                                     <p class="card-text">@post.Description</p>
-                                    <div class="d-flex justify-content-between">
-                                        <span class="badge bg-info">@post.Type</span>
-                                        <span class="text-muted small">@post.UserName</span>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary mt-2">
+                                    <p class="card-text">
+                                        <strong>Type:</strong> @post.Type
+                                        <br />
+                                        <strong>Auteur:</strong> @post.UserName
+                                    </p>
+                                    <button class="btn btn-primary btn-sm" @onclick="@(() => ContactPost(post.Id))">
                                         💬 Contacter
                                     </button>
                                 </div>
@@ -235,6 +240,11 @@
         errorMessage = "Fonctionnalité panier - À implémenter";
     }
 
+    private void ContactPost(Guid postId)
+    {
+        errorMessage = "Fonction Contacter - À implémenter";
+    }
+
     private void CloseExchangeModal()
     {
         ShowCreateExchangeModal = false;
@@ -242,19 +252,41 @@
         selectedRequestedProductId = null;
     }
 
-    private void CreateExchange()
+    private async Task CreateExchange()
     {
         if (selectedOfferedProductId != null && selectedRequestedProductId != null)
         {
-            var newExchange = new Exchange
+            try
             {
-                OfferedProductId = selectedOfferedProductId.Value,
-                RequestedProductId = selectedRequestedProductId.Value,
-                UserId = "user123" // Placeholder
-            };
-            // À terme, on appellera l'API pour enregistrer l'échange :
-            // await Http.PostAsJsonAsync("api/exchanges", newExchange);
-            
+                var offered = products?.FirstOrDefault(p => p.Id == selectedOfferedProductId.Value);
+                var requested = products?.FirstOrDefault(p => p.Id == selectedRequestedProductId.Value);
+
+                var newPost = new ExchangePost
+                {
+                    Title = offered != null && requested != null ? $"{offered.Name} ↔ {requested.Name}" : "Annonce d'échange",
+                    Description = offered != null && requested != null ? $"Proposé: {offered.Name} — Demandé: {requested.Name}" : string.Empty,
+                    PhotoUrl = offered?.PhotoUrl ?? requested?.PhotoUrl,
+                    UserId = "user123",
+                    UserName = "Vous",
+                    Type = ExchangeType.Exchange
+                };
+
+                var resp = await Http.PostAsJsonAsync("api/exchangeposts", newPost);
+                if (resp.IsSuccessStatusCode)
+                {
+                    // recharger la liste depuis l'API pour rester cohérent
+                    await LoadExchangePosts();
+                }
+                else
+                {
+                    errorMessage = "Impossible de créer l'annonce : " + resp.ReasonPhrase;
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "Erreur lors de la création de l'annonce : " + ex.Message;
+            }
+
             CloseExchangeModal();
         }
     }
