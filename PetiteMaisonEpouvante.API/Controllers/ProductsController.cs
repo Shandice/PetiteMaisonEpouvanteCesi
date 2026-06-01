@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PetiteMaisonEpouvante.API.Data;
@@ -46,6 +47,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<Product>> CreateProduct([FromBody] CreateProductDto dto)
     {
         if (!ModelState.IsValid)
