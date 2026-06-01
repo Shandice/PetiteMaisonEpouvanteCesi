@@ -48,7 +48,7 @@ jobs:
       run: docker compose build
 
     - name: Build API Image for Scanning
-      run: docker build -t petitemaisonepouvante.api:latest PetiteMaisonEpouvante.API
+      run: docker build -t petitemaisonepouvante.api:latest -f PetiteMaisonEpouvante.API/Dockerfile .
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
