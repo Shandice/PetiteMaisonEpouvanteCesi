@@ -1,5 +1,5 @@
 # Build Stage
-FROM mcr.microsoft.com/dotnet/sdk:8.0.33 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY ["PetiteMaisonEpouvante.API/PetiteMaisonEpouvante.API.csproj", "PetiteMaisonEpouvante.API/"]
 COPY ["PetiteMaisonEpouvante.Core/PetiteMaisonEpouvante.Core.csproj", "PetiteMaisonEpouvante.Core/"]
@@ -10,7 +10,7 @@ RUN dotnet build -c Release -o /app/build
 RUN dotnet publish -c Release -o /app/publish
 
 # Run Stage
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.33
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 80
