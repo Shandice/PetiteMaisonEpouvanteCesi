@@ -12,6 +12,9 @@ RUN dotnet publish -c Release -o /app/publish
 # Run Stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+RUN apt-get update && \
+    apt-get install -y --only-upgrade libgnutls30 && \
+    rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
 EXPOSE 80
 ENTRYPOINT ["dotnet", "PetiteMaisonEpouvante.API.dll"]
