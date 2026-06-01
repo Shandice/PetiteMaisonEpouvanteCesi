@@ -36,7 +36,7 @@ public class LoadTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact(Timeout = 120_000)]
-    public async Task GetItems_LoadSimulation_CustomConcurrency()
+    public async Task GetProducts_LoadSimulation_CustomConcurrency()
     {
         // setup test server client
         var client = _factory.CreateClient();
@@ -54,7 +54,7 @@ public class LoadTests : IClassFixture<WebApplicationFactory<Program>>
             {
                 try
                 {
-                    return await client.GetAsync("/api/items");
+                    return await client.GetAsync("/api/products");
                 }
                 finally
                 {
