@@ -88,7 +88,7 @@
         <div class="tab-pane fade show active">
             <h2>Espace communautaire d'échanges</h2>
             <button class="btn btn-primary mb-3" @onclick="@(() => ShowCreateExchangeModal = true)" disabled="@(products == null || !products.Any())">
-                ➕ Créer une annonce d'échange
+                Créer une annonce d'échange
             </button>
             <div class="row">
                 @if (exchangePosts == null)
