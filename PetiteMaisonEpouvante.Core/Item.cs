@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace PetiteMaisonEpouvante.Core;
 
@@ -40,6 +41,8 @@ public class Category
     public string Name { get; set; } = string.Empty;
 
     public string? Description { get; set; }
+    
+    [JsonIgnore]
     public List<Product> Products { get; set; } = new();
 }
 
@@ -61,6 +64,8 @@ public class OrderItem
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OrderId { get; set; }
+    
+    [JsonIgnore]
     public Order? Order { get; set; }
     
     public Guid ProductId { get; set; }
