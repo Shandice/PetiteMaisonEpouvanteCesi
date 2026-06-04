@@ -20,7 +20,7 @@ jobs:
       with:
         dotnet-version: 8.0.x
       env:
-        DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
+        DOTNET_INSTALL_DIR: 'C:\dotnet-ci'
 
     - name: Install SonarScanner
       run: dotnet tool install --global dotnet-sonarscanner
