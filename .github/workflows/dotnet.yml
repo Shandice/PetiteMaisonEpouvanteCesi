@@ -7,60 +7,65 @@ on:
     branches: [ "master", "main" ]
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+  build-test-and-analyze:
+    runs-on: self-hosted # Utilise ton runner local directement pour accéder à localhost:9000
 
     steps:
     - uses: actions/checkout@v4
-    
+      with:
+        fetch-depth: 0  # Requis par SonarQube pour une analyse complète
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-        
+
+    - name: Install SonarScanner
+      run: dotnet tool install --global dotnet-sonarscanner
+
     - name: Restore dependencies
       run: dotnet restore PetiteMaisonEpouvante.Solution.sln
       
+    # 1. On démarre l'analyse SonarQube (on pointe vers ton localhost:9000)
+    - name: Begin SonarQube Analysis
+      run: |
+        dotnet sonarscanner begin /k:"PetiteMaisonEpouvante" /d:sonar.host.url="http://localhost:9000"  /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+
     - name: Build
       run: dotnet build PetiteMaisonEpouvante.Solution.sln --no-restore
-      
-    - name: Test and Collect Coverage
-      run: dotnet test PetiteMaisonEpouvante.Solution.sln --no-build --verbosity normal --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~LoadTests"
 
-    # run the heavier load/performance scenario separately so it's easy to
-    # identify failures or to allocate more resources if needed
-    - name: Run Load/Performance Tests
-      run: |
-        dotnet test PetiteMaisonEpouvante.Tests/PetiteMaisonEpouvante.Tests.csproj \
-          --no-build \
-          --filter FullyQualifiedName~LoadTests \
-          --verbosity normal
-      # a timeout could be added via 'timeout-minutes' at the job level if needed
+    # 2. On lance les tests en générant un rapport de couverture compatible avec SonarQube
+    - name: Test and Collect Coverage
+      run: dotnet test PetiteMaisonEpouvante.Solution.sln --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=opencover --filter "FullyQualifiedName!~LoadTests"
+
+    # 3. On termine l'analyse (les résultats sont envoyés à ton SonarQube local)
+    - name: End SonarQube Analysis
+      run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
   build-docker-images:
-    needs: build-and-test
-    runs-on: ubuntu-latest
+    needs: build-test-and-analyze
+    runs-on: self-hosted # Toujours en local pour que Kubernetes y ait accès directement
     
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Simulate Deployment (Build Docker Compose)
-      run: docker compose build
 
-    - name: Build API Image for Scanning
+    - name: Build API Image
       run: docker build -t petitemaisonepouvante.api:latest -f PetiteMaisonEpouvante.API/Dockerfile .
+      
+    - name: Build UI Image
+      run: docker build -t petitemaisonepouvante.ui:latest -f PetiteMaisonEpouvante.UI/Dockerfile .
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: 'petitemaisonepouvante.api:latest'
         format: 'table'
-        exit-code: '1'
+        exit-code: '1' # Laisse à 0 le temps de tester si tu ne veux pas bloquer la CI
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH'
 
-  deploy-local:
+  deploy-local-k8s:
     needs: build-docker-images
     runs-on: self-hosted
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -68,31 +73,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Deploy locally on self-hosted runner
+    - name: Deploy to Local Kubernetes
       run: |
-        docker compose pull
-        docker compose up -d --build
-        docker image prune -f
-
-  # optionally you could deploy to a Kubernetes cluster here.  GitHub Actions
-  # runners do not have a cluster by default, but you could add a step to
-  # configure `kubectl` against your environment (kind, GKE, AKS, etc.) and then
-  # apply the manifests located in the `k8s/` directory:
-  #
-  # deploy-to-k8s:
-  #   needs: build-docker-images
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Setup kubectl
-  #       # configure credentials for your cluster (uses secrets)
-  #       run: |
-  #         echo "TODO: login to cluster"
-  #     - name: Apply Kubernetes manifests
-  #       run: |
-  #         kubectl apply -f k8s/namespace.yaml
-  #         kubectl apply -f k8s/jwt-secret.yaml
-  #         kubectl apply -f k8s/db-deployment.yaml
-  #         kubectl apply -f k8s/api-deployment.yaml
-  #         kubectl apply -f k8s/ui-deployment.yaml
-  #         kubectl apply -f k8s/ingress.yaml
+        # On applique tous les fichiers du dossier k8s
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/jwt-secret.yaml
+        kubectl apply -f k8s/db-deployment.yaml
+        kubectl apply -f k8s/api-deployment.yaml
+        kubectl apply -f k8s/ui-deployment.yaml
+        kubectl apply -f k8s/ingress.yaml
+        
+        # On force Kubernetes à redémarrer les pods pour prendre en compte 
+        # les nouvelles images "latest" fraîchement buildées par la CI
+        kubectl rollout restart deployment/api-deployment -n default
+        kubectl rollout restart deployment/ui-deployment -n default

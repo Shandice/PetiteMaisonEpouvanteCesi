@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mssql-data-pvc
+  namespace: petitemaisonepouvante
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi # 1 Go de stockage local alloué à la DB
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,13 +34,14 @@ spec:
         - name: ACCEPT_EULA
           value: "Y"
         - name: SA_PASSWORD
-          value: "Password123!" # use a secret in production
+          value: "Password123!" # À sécuriser via un Secret plus tard
         volumeMounts:
         - name: mssqldata
           mountPath: /var/opt/mssql
       volumes:
       - name: mssqldata
-        emptyDir: {} # for demo; switch to PVC in real use
+        persistentVolumeClaim:
+          claimName: mssql-data-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -41,4 +54,3 @@ spec:
   ports:
   - port: 1433
     targetPort: 1433
-  clusterIP: None # headless service, clients connect by name

@@ -15,7 +15,8 @@ spec:
     spec:
       containers:
       - name: api
-        image: petitemaisonepouvante.api:latest  # build locally with `docker build -t petitemaisonepouvante.api:latest PetiteMaisonEpouvante.API`
+        image: petitemaisonepouvante.api:latest
+        imagePullPolicy: Never  # CRUCIAL : Force K8s à utiliser ton image locale
         ports:
         - containerPort: 80
         env:
