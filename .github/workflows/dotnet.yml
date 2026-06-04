@@ -45,13 +45,9 @@ jobs:
       run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
     # 4. On lance UNIQUEMENT les tests de charge et on génère un fichier .trx
+    # 4. On lance UNIQUEMENT les tests de charge et on génère un fichier .trx
     - name: Run Load/Performance Tests
-      run: |
-        dotnet test PetiteMaisonEpouvante.Tests/PetiteMaisonEpouvante.Tests.csproj \
-          --no-build \
-          --filter FullyQualifiedName~LoadTests \
-          --verbosity normal \
-          --logger "trx;LogFileName=load_tests_results.trx"
+      run: dotnet test PetiteMaisonEpouvante.Tests/PetiteMaisonEpouvante.Tests.csproj --no-build --filter FullyQualifiedName~LoadTests --verbosity normal --logger "trx;LogFileName=load_tests_results.trx"
 
     # 5. On génère le tableau de bord visuel dans GitHub Actions
     - name: Publish Load Test Results
