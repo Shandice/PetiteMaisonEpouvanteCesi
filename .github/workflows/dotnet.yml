@@ -44,6 +44,24 @@ jobs:
     - name: End SonarQube Analysis
       run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
+    # 4. On lance UNIQUEMENT les tests de charge et on génère un fichier .trx
+    - name: Run Load/Performance Tests
+      run: |
+        dotnet test PetiteMaisonEpouvante.Tests/PetiteMaisonEpouvante.Tests.csproj \
+          --no-build \
+          --filter FullyQualifiedName~LoadTests \
+          --verbosity normal \
+          --logger "trx;LogFileName=load_tests_results.trx"
+
+    # 5. On génère le tableau de bord visuel dans GitHub Actions
+    - name: Publish Load Test Results
+      uses: dorny/test-reporter@v1
+      if: always() # Permet de publier le rapport même si les tests plantent
+      with:
+        name: Rapport des Tests de Charge
+        path: "**/load_tests_results.trx"
+        reporter: dotnet-trx
+
   build-docker-images:
     needs: build-test-and-analyze
     runs-on: self-hosted # Toujours en local pour que Kubernetes y ait accès directement
