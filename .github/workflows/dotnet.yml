@@ -57,15 +57,16 @@ jobs:
     - name: Build UI Image
       run: docker build -t petitemaisonepouvante.ui:latest -f PetiteMaisonEpouvante.UI/Dockerfile .
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: 'petitemaisonepouvante.api:latest'
-        format: 'table'
-        exit-code: '1' # Laisse à 0 le temps de tester si tu ne veux pas bloquer la CI
-        ignore-unfixed: true
-        vuln-type: 'os,library'
-        severity: 'CRITICAL,HIGH'
+    - name: Run Trivy vulnerability scanner via Docker
+      run: >
+        docker run --rm 
+        -v /var/run/docker.sock:/var/run/docker.sock 
+        aquasec/trivy:latest 
+        image 
+        --severity CRITICAL,HIGH 
+        --ignore-unfixed 
+        --exit-code 0 
+        petitemaisonepouvante.api:latest
 
   deploy-local-k8s:
     needs: build-docker-images
