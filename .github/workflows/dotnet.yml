@@ -88,5 +88,5 @@ jobs:
         
         # On force Kubernetes à redémarrer les pods pour prendre en compte 
         # les nouvelles images "latest" fraîchement buildées par la CI
-        kubectl rollout restart deployment/api-deployment -n default
-        kubectl rollout restart deployment/ui-deployment -n default
+        kubectl rollout restart deployment/petitemaisonepouvante-api -n petitemaisonepouvante
+        kubectl rollout restart deployment/petitemaisonepouvante-ui -n petitemaisonepouvante
